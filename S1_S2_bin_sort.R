@@ -221,5 +221,5 @@ colnames(s.bin) <- c("S1.bin", "S1.Proportion", "S2.bin", "S2.Proportion")
 write.table(s.bin, file=paste("./S_bins/", spec1, "aligning", spec2, sep = ""), sep = "\t", quote = FALSE,row.names = FALSE)
 
 
-
+# there is still errors in the overlaps becasue of absent ch names
 
