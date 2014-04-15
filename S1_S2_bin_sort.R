@@ -6,8 +6,9 @@
 # score name1, start1, alnSize1, strand1, seqSize1, name2, start2, alnSize2, strand2, seqSize2, blocks
 # awk 'int($4)>=200' cow2humanAlignment, thsi command is used in shell to get alignment pieces 200 bp long
 
-
-
+# write down species here
+spec1 <- "COW"
+spec2 <- "HUMAN"
 
 rm( list = ls())
 
@@ -47,6 +48,27 @@ rm(neg.ali)
 rm(SEQ)
 
 
+#### remove one to many mappers from reference and query
+a.S2.gr <- GRanges( seqnames = Rle(a[,5]),
+					ranges = IRanges(start = a[,6], end = a[,7],names = a[,1]),
+					alignmentID = a[,1])
+
+a.S1.gr <- GRanges( seqnames = Rle(a[,2]),
+					ranges = IRanges(start = a[,3], end = a[,4],names = a[,1]),
+					alignmentID = a[,1])
+
+# perform self overlaps to identify if regions overlap themselves
+multiS2 <- as.matrix(findOverlaps(a.S2.gr, a.S2.gr))
+multiS1 <- as.matrix(findOverlaps(a.S1.gr, a.S1.gr))
+# basicly species 1 does not ovelap itself
+# however species 2 does
+# therefore regions in species 1 are mapping to the same place in species two
+# non multis
+n.multi <- multiS2[!(multiS2[,1] %in% unique(multiS2[duplicated(multiS2[,1]),1])),1]
+a <- a[n.multi,]
+
+
+
 ##########
 # Back to sorting
 # data should now have no repeats
@@ -62,79 +84,124 @@ a.S2.gr <- GRanges( seqnames = Rle(a[,5]),
 					ranges = IRanges(start = a[,6], end = a[,7],names = a[,1]),
 					alignmentID = a[,1])
 
-
-
+s1.gr <- GRanges( seqnames = Rle(s1[,1]), 
+					ranges = IRanges(start = s1[,2], end = s1[,3]),
+					bin_ID = s1[,5])
 					
-L.h <- as.matrix(findOverlaps(a.S1.gr, S1.gr))
-L.c <- as.matrix(findOverlaps(a.S2.gr, S2.gr))
+s2.gr <- GRanges( seqnames = Rle(s2[,1]), 
+					ranges = IRanges(start = s2[,2], end = s2[,3]),
+					bin_ID = s2[,5])
 
-# lets try the merge function
-colnames(L.h) = c("a","species1")
-colnames(L.c) = c("a","species2")
-M <- merge(L.h,L.c)
-M.g <- cbind(as.data.frame(a.S1.gr[M[,1]], row.names = NULL),as.data.frame(a.S2.gr[M[,1]], row.names = NULL),as.data.frame(S1.gr[M[,2]], row.names = NULL),as.data.frame(S2.gr[M[,3]], row.names = NULL))
-M.g <- M.g[,c(1,2,3,4,6,7,8,9,10,12,13,14,15,16,18,19,20,21,22,24)]
-De <- M.g[M.g[,10] %in% M.g[duplicated(M.g[,10]),10],]
 
+
+# identify alignment segments that overlap S1 bins and S2 bins					
+OL.s1 <- as.matrix(findOverlaps(a.S1.gr, s1.gr))
+OL.s2 <- as.matrix(findOverlaps(a.S2.gr, s2.gr))
+
+# merge so that it is possible to identify the alignment section between eahc s1 and s2 bin
+colnames(OL.s1) = c("a","species1")
+colnames(OL.s2) = c("a","species2")
+Merge_OL.s1.s2 <- merge(OL.s1,OL.s2)
+
+Merged.DF <- cbind(as.data.frame(a.S1.gr[Merge_OL.s1.s2$a], row.names = NULL, stringsAsFactors = FALSE)[,c(1:4,6)],
+			 as.data.frame(a.S2.gr[Merge_OL.s1.s2$a], row.names = NULL, stringsAsFactors = FALSE)[,c(1:4,6)],
+			 as.data.frame(s1.gr[Merge_OL.s1.s2$species1], row.names = NULL, stringsAsFactors = FALSE)[,c(1:4,6)],
+			 as.data.frame(s2.gr[Merge_OL.s1.s2$species2], row.names = NULL, stringsAsFactors = FALSE)[,c(1:4,6)])
+			 
+colnames(Merged.DF) <- c(paste("aS1", colnames(Merged.DF)[1:5], sep = "_"),
+			paste("aS2", colnames(Merged.DF)[6:10], sep = "_"),
+			paste("binS1", colnames(Merged.DF)[11:15], sep = "_"),
+			paste("binS2", colnames(Merged.DF)[16:20], sep = "_"))
+			
+for(i in seq(length(Merged.DF))){
+	if(length(grep("seqname", colnames(Merged.DF)[i])) == 1){Merged.DF[,i] <- as.character(Merged.DF[,i])}
+	else if(length(grep("alignmentID", colnames(Merged.DF)[i])) == 1){Merged.DF[,i] <- as.character(Merged.DF[,i])}
+	else{Merged.DF[,i] <- as.numeric(Merged.DF[,i])}	
+}			
+
+
+
+# look for duplications as to locate alignment pieces on the edge of two bins
+# some are duplicated more than once
+De <- Merged.DF[Merged.DF$aS2_alignmentID   %in%  (Merged.DF$aS2_alignmentID[duplicated(Merged.DF$aS2_alignmentID)]),]
+
+# identiying duplications creates a dataframe in which part of an alignment belongs in one bin and part belongs in the other bin
+# The following loop will go through and change values so they sit inside bins
+# ie if the end of an alignment is > then the end of the bin its aligned to then the end of the alignment is cut
+# likiwise there will be a piece where that start of the same alignment is < the start of a bin, this will also be cut.
+# this will be done for S1 and S2
+# may not actullay need to be run through a for loop as im pretty sure each element does not interact with any other element
+# therefore i could grab all of one type of element and make the changes all at once
+
+# things on the boundries in both species form a negative byproduct which is discarded
 
 i = NULL
-# human border pieces
-for(i in seq(dim(De)[1])) 
-     {
- if(De[i,2] < De[i,12]) {        
- x <- (De[i,12] - De[i,2])/De[i,4]
- De[i,2] <- as.integer(De[i,2] + (De[i,4]*x))
- De[i,4] <- as.integer(De[i,4] - (De[i,4]*x))
- De[i,7] <- as.integer(De[i,7] + (De[i,9]*x))
- De[i,9] <- as.integer(De[i,9] - (De[i,9]*x))
+# split border pieces accordingly using proportions in order to make it even between both species
+for(i in seq(dim(De)[1])){
+	
+	#pieces where the start aS1 is less than the start of binS1
+	# determine by what proportion this occurs and then remove it from the aignment piece in each species 
+	if(De$aS1_start[i] < De$binS1_start[i]) {
+		x <- (De$binS1_start[i] - De$aS1_start[i])/De$aS1_width[i]
+		De$aS1_start[i] <- De$aS1_start[i] + (De$aS1_width[i]*x)
+		De$aS1_width[i] <- De$aS1_width[i] - (De$aS1_width[i]*x)
+		De$aS2_start[i] <- De$aS2_start[i] + (De$aS2_width[i]*x)
+		De$aS2_width[i] <- De$aS2_width[i] - (De$aS2_width[i]*x)
     } 
  
- if(De[i,3] > De[i,13]) 
- { 
- x <- (De[i,3] - De[i,13])/De[i,4]
- De[i,3] <- as.integer(De[i,3] - (De[i,4]*x))
- De[i,4] <- as.integer(De[i,4] - (De[i,4]*x))
- De[i,8] <- as.integer(De[i,8] - (De[i,9]*x))
- De[i,9] <- as.integer(De[i,9] - (De[i,9]*x))
-  } 
+	if(De$aS1_end[i] > De$binS1_end[i]){
+		x <- (De$aS1_end[i] - De$binS1_end[i])/De$aS1_width[i]
+ 		De$aS1_end[i] <- De$aS1_end[i] - (De$aS1_width[i]*x)
+		De$aS1_width[i] <- De$aS1_width[i] - (De$aS1_width[i]*x)
+		De$aS2_end[i] <- De$aS2_end[i] - (De$aS2_width[i]*x)
+		De$aS2_width[i] <- De$aS2_width[i] - (De$aS2_width[i]*x)
+	} 
 
-if(De[i,7] < De[i,17]) 
- { 
- x <- (De[i,17] - De[i,7])/De[i,9]
- De[i,7] <- as.integer(De[i,7] + (De[i,9]*x))
- De[i,9] <- as.integer(De[i,9] - (De[i,9]*x))
- De[i,2] <- as.integer(De[i,2] + (De[i,4]*x))
- De[i,4] <- as.integer(De[i,4] - (De[i,4]*x))
- } 
+	if(De$aS2_start[i] < De$binS2_start[i]){
+		x <- (De$binS2_start[i] - De$aS2_start[i])/De$aS2_width[i]
+		De$aS2_start[i] <- De$aS2_start[i] + (De$aS2_width[i]*x)
+		De$aS2_width[i] <- De$aS2_width[i] - (De$aS2_width[i]*x)
+		De$aS1_start[i] <- De$aS1_start[i] + (De$aS1_width[i]*x)
+		De$aS1_width[i] <- De$aS1_width[i] - (De$aS1_width[i]*x)
+	} 
+	
+	if(De$aS2_end[i] > De$binS2_end[i]){ 
+		x <- (De$aS2_end[i] - De$binS2_end[i])/De$aS2_width[i]
+		De$aS2_end[i] <- De$aS2_end[i] - (De$aS2_width[i]*x)
+		De$aS2_width[i] <- De$aS2_width[i] - (De$aS2_width[i]*x)
+		De$aS1_end[i] <- De$aS1_end[i] - (De$aS1_width[i]*x)
+		De$aS1_width[i] <- De$aS1_width[i] - (De$aS1_width[i]*x)
+	} 
+}
+De <- De[!(De$aS1_width < 0),]
+Merged.DF[as.numeric(rownames(De)),] <- De
 
- if(De[i,8] > De[i,18]) 
- { 
- x <- (De[i,8] - De[i,18])/De[i,9]
- De[i,8] <- as.integer(De[i,8] - (De[i,9]*x))
- De[i,9] <- as.integer(De[i,9] - (De[i,9]*x))
- De[i,3] <- as.integer(De[i,3] - (De[i,4]*x))
- De[i,4] <- as.integer(De[i,4] - (De[i,4]*x))
- } 
- }
 
-M.g[as.numeric(rownames(De)),] <- De
-M.g <- (M.g[!(M.g[,9] < 0), ])
 
-# loop works well at spliting boarders 
+
+
+
 # now work on seperating into larger groups
 
+# work out the actual proportion of shared bins between two species
+M.g <- Merged.DF
+# turn widths into proportions 
 M.g[,c(4,9)] <- M.g[,c(4,9)]/1500000
+
+# M.a is supposed to be widths inside each bin
+
 M.a <- M.g[,c(15,4,20,9)]
 M.a <- as.matrix(M.a)
 
 Hbins <- unique(M.a[,1])
 
-b2 <- NULL
+s.bin <- NULL
 for (i in seq(along=Hbins)){
 	b <- M.a[(Hbins[i] == M.a[,1]),]
 	if(length(b) == 4){b <- t(as.matrix(b)) }
 	b1 <- unique(b[,3])
 	c2 = NULL
+	# need to add up all the portions of all the bins that align with S1
 	for (o in seq(along=b1)){
 		c <- b[(b1[o] == b[,3]),]
 		if (length(c) == 4){
@@ -144,14 +211,14 @@ for (i in seq(along=Hbins)){
 		c1 <- data.frame(c[1,1], sum(c[,2]), c[1,3], sum(c[,4]))
 		c2 <- rbind(c2,c1)
 	}
-	b2 <- rbind(b2,c2)
+	s.bin <- rbind(s.bin,c2)
 }
 
-s.bin <- b2
 
-colnames(s.bin) <- c("H.bin", "H.P", "C.bin", "C.P")
 
-write.table(s.bin, file="./S_bins/C_bin_aligning_H_bin_independant1", sep = "\t", quote = FALSE,row.names = FALSE)
+colnames(s.bin) <- c("S1.bin", "S1.Proportion", "S2.bin", "S2.Proportion")
+
+write.table(s.bin, file=paste("./S_bins/", spec1, "aligning", spec2, sep = ""), sep = "\t", quote = FALSE,row.names = FALSE)
 
 
 
