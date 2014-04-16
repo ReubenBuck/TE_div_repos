@@ -7,34 +7,37 @@
 # awk 'int($4)>=200' cow2humanAlignment, thsi command is used in shell to get alignment pieces 200 bp long
 
 # write down species here
-spec1 <- "COW"
-spec2 <- "HUMAN"
+
 
 rm( list = ls())
 
+spec1 <- "HUMAN"
+spec2 <- "COW"
+UCSCspec2 <- "bosTau6"
+
 setwd("~/Desktop/Repeat evolution/bin_synteny")
 ## write it in R to underastand the problem
-a <- read.table("./usable_alignment/chr_align_C_H")
+a <- read.table("./usable_alignment/chr_align1")
 a[,1] <- rownames(a)
-s1 <- read.table("./PCA/bins_bt6_pca_order.txt")
-s2 <- read.table("./PCA/bins_hg19_pca_regions.txt")
-
+s1 <- read.table("./PCA/bins_hg19_pca_regions.txt")
+s2 <- read.table("./PCA/bins_bt6_pca_order.txt", header = FALSE)
+if(colnames(s2)[1] != "V1"){ s2 <- read.table("./PCA/bins_bt6_pca_order.txt", header = TRUE)}
 
 require(GenomicRanges)
-require(BSgenome.Hsapiens.UCSC.hg19)
 
+con <- gzcon(url(paste("http://hgdownload.soe.ucsc.edu/goldenPath/",UCSCspec2,"/database/chromInfo.txt.gz", sep="")))
+txt <- readLines(con)
+dat <- read.table(textConnection(txt))
 # the conditional below is for the two different format chromosome information comes in for diffferent species
 
 # if using LAST alignments there's a good chance I won't need this
-s2.genome <- BSgenome.Hsapiens.UCSC.hg19
 
-SEQ<- seqlengths(s2.genome)
-if(length(grep("_", seqnames(s2.genome))) == 0){
-	SEQ2 <- width(s2.genome$chrUn)
-	names(SEQ2) <- names(s2.genome$chrUn)
-	SEQ <- c(SEQ,SEQ2)
-}
-SEQ <- data.frame(names(SEQ), SEQ)
+
+# so we have a probelem with accesing information about missing chromosomes
+# will it still work if we only get rid of it out of alignment
+
+SEQ <- dat[,1:2]
+colnames(SEQ) <- c("chr", "size")
 neg.ali <- a[a[,8] == "-",]
 neg.ali <- merge(neg.ali, SEQ, by.x = 5, by.y = 1)
 neg.ali[,7] <- neg.ali[,10] - neg.ali[,7]
