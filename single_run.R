@@ -13,12 +13,43 @@
 
 
 
+# sort bins up here and remove chromosomes later on
+# Ican also run this on joys stuff but I'm going to have to run various scaling options
+# and options on what variables I choose to keep in
+# Then I can change the level at which we view genome maintenece 
 
+
+
+
+# jobs to do on leuwenhoek
+# ensure colnames are correct on joys files
+# ensure we are actually able to pick and choose the variables we want
+# make it so the file names all conform to each other
+# download and process the appropriate alignmnet files on UCSC
+# and also the chromosome information
 
 
 
 
 rm( list = ls())
+
+
+require("doParallel")
+require(GenomicRanges)
+
+#parallel options
+cl <- makeCluster(2)
+registerDoParallel(cl)
+
+
+# option to remove unplaced chromosomes
+rem.un <- "yes"
+
+# option to decide the various neighborhood sizes to be used 
+# write out a vector containg the sizes to analyse
+
+sizes <- c(5,20,50,100,150,200,300,500,750)
+
 
 spec1 <- "DOG"
 spec2 <- "HUMAN"
@@ -29,17 +60,23 @@ setwd("~/Desktop/Repeat evolution/bin_synteny")
 a <- read.table(paste("./usable_alignment/chr_align_", spec1, "_", spec2,"_e", sep = ""))
 a[,1] <- rownames(a)
 
-
 #downloading s1 and s2 changes to downloading the latest processed stuff i do myself
 # these files have bin information combined with dimensions
 
-
 s1 <- read.table(paste("~/Documents/phd/Desktop analyses/new_PCA/sort results/",spec1,"_Scaled", sep = ""), header = TRUE)
+if(rem.un == "yes"){
+	if(length(grep("U", s1$chr)) > 0){s1 <- s1[-(grep( "U", s1$chr)),]}
+	if(length(grep("_", s1$chr)) > 0){s1 <- s1[-(grep("_", s1$chr)),]}
+	if(length(grep("M", s1$chr)) > 0){s1 <- s1[-(grep("M", s1$chr)),]}
+	}
 s2 <- read.table(paste("~/Documents/phd/Desktop analyses/new_PCA/sort results/",spec2,"_Scaled", sep = ""), header = TRUE)
+if(rem.un == "yes"){
+	if(length(grep("U", s2$chr)) > 0){s2 <- s2[-(grep( "U", s2$chr)),]}
+	if(length(grep("_", s2$chr)) > 0){s2 <- s2[-(grep("_", s2$chr)),]}
+	if(length(grep("M", s2$chr)) > 0){s2 <- s2[-(grep("M", s2$chr)),]}
+	}
 
 
-
-require(GenomicRanges)
 
 con <- gzcon(url(paste("http://hgdownload.soe.ucsc.edu/goldenPath/",UCSCspec2,"/database/chromInfo.txt.gz", sep="")))
 txt <- readLines(con)
@@ -91,10 +128,8 @@ a[,1] <- rownames(a) <- 1:dim(a)[1]
 #
 # Take out the repeat sequences
 
+# "A" is a back up variable
 A <- a
-
-
-
 
 # Readin Repeat files
 
@@ -286,7 +321,14 @@ ali.2$N.S1.end <- as.integer(((ali.2$S1.length/ali.2$S2.length)*(ali.2$U.S2.p.e 
 a <- ali.2[,c("U.a.id", "N.S1.chr" , "N.S1.start", "N.S1.end", "U.S2.chr", "U.S2.p.s", "U.S2.p.e")]
 a[,1] <- rownames(a) <- 1:dim(a)[1]
 
-
+if(rem.un == "yes"){
+	if(length(grep("U", a$N.S1.chr)) > 0){a <- a[-(grep( "U", a$N.S1.chr)),]}
+	if(length(grep("_", a$N.S1.chr)) > 0){a <- a[-(grep("_", a$N.S1.chr)),]}
+	if(length(grep("M", a$N.S1.chr)) > 0){a <- a[-(grep("M", a$N.S1.chr)),]}
+	if(length(grep("U", a$U.S2.chr)) > 0){a <- a[-(grep( "U", a$U.S2.chr)),]}
+	if(length(grep("_", a$U.S2.chr)) > 0){a <- a[-(grep("_", a$U.S2.chr)),]}
+	if(length(grep("M", a$U.S2.chr)) > 0){a <- a[-(grep("M", a$U.S2.chr)),]}
+	}
 
 
 ##########
@@ -306,7 +348,7 @@ a.S2.gr <- GRanges( seqnames = Rle(a[,5]),
 					
 XS1 <- as.matrix(findOverlaps(a.S1.gr, S1rep.gr))
 XS2 <- as.matrix(findOverlaps(a.S1.gr, S1rep.gr))
-
+# insert warning here because it means it has failed
 
 
 s1.gr <- GRanges( seqnames = Rle(s1$chr), 
@@ -449,15 +491,6 @@ write.table(s.bin, file=paste("./S_bins/", spec1, "aligning", spec2,"_single_run
 # there is still errors in the overlaps becasue of absent ch names
 
 
-
-
-
-
-
-
-
-
-
 # if I could get this to work on everything i have saved then it will be much easier to run through everything
 # the probelem is that I have to worry about all the pca stuff too
 
@@ -487,9 +520,23 @@ colnames(S2.bin.coord) <- c("S2.bin", paste("S2TE",colnames(s2[,5:length(s2)]), 
 bin.coord <- merge(merge(s.bin,S1.bin.coord), S2.bin.coord)
 
 
+###################
+###
+#
+###    Begin to run parallel loop here that can handle the process at various sizes of "no"
+#
+###
+###################
 
 
-no <- 5
+
+
+
+
+
+dist.all <- foreach(i = sizes) %dopar% { no <- i
+	
+no <- i
 S1bin <- unique(bin.coord$S1.bin)
 S1.N.dist <- NULL
 S1ploters <- unique(bin.coord[,c(grep("S1.bin", colnames(bin.coord)), grep("S1TE", colnames(bin.coord)))])
@@ -521,27 +568,6 @@ for( i in seq(S1bin)){
 # if possible find a way to vectorise it rater than loop it
 
 
-
-
-
-
-# we now have a table that has the distance to the 5 nearest neighbors of each point in human
-
-# how the hell do we extend it to cow
-
-#all the points i need for each calculation hvae been effectivly subsetted
-
-# I got this wroking for multiple dimensions however it doesn't normailse correctly 
-# I still don't know how to get it working for multi mappers
-
-#((d(a1,b1)))
-
-# this way we do each bin dist by itself rather than all at once and calculate the mean at the end
-
-
-# here we can make a matrix after making the dist calculations
-
-
 # calculating the distance for each point in S2
 # fill in the distances then multiply by the proportions
 #    b1 b2 b3  
@@ -549,9 +575,6 @@ for( i in seq(S1bin)){
 # a2
 #
 # get the sum of the matrix and divide by the sum(pa) * sum(pb)
-
-
-
 
 
 
@@ -602,10 +625,10 @@ Dists$diff <- sqrt((((Dists$S1.mean.dist - Dists$S2.mean.dist)))^2)
 Dists$S1_to_S2_ratio <- Dists$S1.mean.dist / Dists$S2.mean.dist
 Dists$S2_to_S1_ratio <- Dists$S2.mean.dist / Dists$S1.mean.dist
 	
-write.table(Dists, file = paste("Div_score_pc1_pc2/", spec1, "_to_", spec2, "_Mdim_dist_scaled", sep = ""), quote = FALSE, sep = "\t", row.names= FALSE )
+write.table(Dists, file = paste("Div_score_pc1_pc2/", spec1, "_to_", spec2, "_Mdim_dist_scaled_N.size_", no, sep = ""), quote = FALSE, sep = "\t", row.names= FALSE )
 	
 	
-	
+}
 	
 	
 
