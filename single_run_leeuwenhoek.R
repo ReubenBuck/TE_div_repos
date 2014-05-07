@@ -38,7 +38,7 @@ require("doParallel")
 require(GenomicRanges)
 
 #parallel options
-cl <- makeCluster(8)
+cl <- makeCluster(6)
 registerDoParallel(cl)
 
 
@@ -48,14 +48,14 @@ rem.un <- "yes"
 # option to decide the various neighborhood sizes to be used 
 # write out a vector containg the sizes to analyse
 
-sizes <- c(5,20,50,100,150,200,300,500,750)
+sizes <- c(5,50,200,500,1000,1500)
 
 # for spec names first letter upper, the rest lower
 # also use common names except for cow which is Bovine
 
-spec1 <- "Mouse"
-spec2 <- "Human"
-UCSCspec2 <- "hg19"
+spec1 <- "Human"
+spec2 <- "Bovine"
+UCSCspec2 <- "bosTau6"
 
 setwd("/scratch/reuben_counting/TE_div/")
 ## write it in R to underastand the problem
@@ -97,16 +97,18 @@ mb <- 1000000
 bin.size = 500000
 
 #which columns to keep 
-keep.NGenes = "no"
-keep.NG4s = "no"
-keep.NCpGI = "no"
-keep.CpGBP = "no"
-keep.GC = "no"
+keep.NGenes = "yes"
+keep.NG4s = "yes"
+keep.NCpGI = "yes"
+keep.CpGBP = "yes"
+keep.GC = "yes"
+SCALE = "yes"
 
 for(i in seq(along=slist)){
       count <- slist[[i]]
       count <- count[count$Known >= bin.size,]
       count[,5:(length(count)-1)] <- count[,5:(length(count)-1)]/mb   
+      if(SCALE == "yes"){count[,5:(length(count)-1)] <- scale(count[,5:(length(count)-1)])}
       if(keep.NGenes == "no"){count <- count[,!(colnames(count) == "NGenes")]}
       if(keep.NG4s ==	"no"){count <- count[,!(colnames(count) == "NG4s")]}
       if(keep.NCpGI ==	"no"){count <- count[,!(colnames(count) == "NCpGI")]}
@@ -454,8 +456,8 @@ for(i in seq(dim(De)[1])){
 		De$aS1_width[i] <- De$aS1_width[i] - (De$aS1_width[i]*x)
 		De$aS2_start[i] <- De$aS2_start[i] + (De$aS2_width[i]*x)
 		De$aS2_width[i] <- De$aS2_width[i] - (De$aS2_width[i]*x)
-    } 
- 
+	} 
+			# there was an error asociated with this last line maybe it was those red things 
 	if(De$aS1_end[i] > De$binS1_end[i]){
 		x <- (De$aS1_end[i] - De$binS1_end[i])/De$aS1_width[i]
  		De$aS1_end[i] <- De$aS1_end[i] - (De$aS1_width[i]*x)
@@ -492,7 +494,13 @@ Merged.DF[as.numeric(rownames(De)),] <- De
 
 # work out the actual proportion of shared bins between two species
 M.g <- Merged.DF
-# turn widths into proportions 
+# turn widths into proportions
+
+###### A potential bug needs looking at here
+# not all bins are 1500000
+# probably need to make a vector of bin IDs nad known bases in those bins and then divide by the nuber of known bases
+
+ 
 M.g[,c(4,9)] <- M.g[,c(4,9)]/1500000
 
 # M.a is supposed to be widths inside each bin
@@ -525,7 +533,7 @@ for (i in seq(along=Hbins)){
 
 colnames(s.bin) <- c("S1.bin", "S1.Proportion", "S2.bin", "S2.Proportion")
 
-
+write.table(s.bin, file=paste("./S_bins/", spec1, "aligning", spec2,"_single_run_scaled", sep = ""), sep = "\t", quote = FALSE,row.names = FALSE)
 
 
 
@@ -564,8 +572,7 @@ bin.coord <- merge(merge(s.bin,S1.bin.coord), S2.bin.coord)
 
 
 
-dist.all <- foreach(i = sizes) %dopar% { no <- i
-	
+for(i in sizes){	
 no <- i
 S1bin <- unique(bin.coord$S1.bin)
 S1.N.dist <- NULL
@@ -606,12 +613,8 @@ for( i in seq(S1bin)){
 #
 # get the sum of the matrix and divide by the sum(pa) * sum(pb)
 
-
-
 Dists <- NULL
 for(i in seq(S1bin)){
-	
-	
 	A_points <- bin.coord[bin.coord$S1.bin == S1bin[i],]
 	# find the neigbors
 	other_points <- bin.coord[bin.coord$S1.bin %in% S1.N.dist$neighbor[S1.N.dist$S1.bin == S1bin[i]],]
@@ -644,16 +647,8 @@ for(i in seq(S1bin)){
 	
 	# get a DF with cols that show 
 	row_final <- data.frame(S1.bin = S1bin[i],  S2.mean.dist , S1.mean.dist = S1.N.dist$ave.dist[S1.N.dist$S1.bin == S1bin[i]][1])
-	Dists <- rbind(Dists, row_final)
-
-	
+	Dists <- rbind(Dists, row_final)	
 	}
-	
-
-Dists$percentage.diff <- sqrt((((Dists$S1.mean.dist - Dists$S2.mean.dist)/ Dists$S1.mean.dist) * 100)^2)
-Dists$diff <- sqrt((((Dists$S1.mean.dist - Dists$S2.mean.dist)))^2)
-Dists$S1_to_S2_ratio <- Dists$S1.mean.dist / Dists$S2.mean.dist
-Dists$S2_to_S1_ratio <- Dists$S2.mean.dist / Dists$S1.mean.dist
 	
 write.table(Dists, file = paste("Div_score/", spec1, "_to_", spec2, "_Mdim_dist_scaled_N.size_", no, sep = ""), quote = FALSE, sep = "\t", row.names= FALSE )
 	
