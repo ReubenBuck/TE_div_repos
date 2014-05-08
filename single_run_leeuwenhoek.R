@@ -1,18 +1,4 @@
-# Bin sort and MD analysis using data processed by reuben
-#
-#
-
-
-
-# if it is possible get the neigborhood identification faster
-
-# also install the table generation.
-
-
-# then this whole thing can be run on leeuwenhoek and we cna use multiple processors and do multiple species at the same time
-
-
-
+# Bin sort and MD analysis using data processed by reube
 # sort bins up here and remove chromosomes later on
 # Ican also run this on joys stuff but I'm going to have to run various scaling options
 # and options on what variables I choose to keep in
@@ -48,14 +34,14 @@ rem.un <- "yes"
 # option to decide the various neighborhood sizes to be used 
 # write out a vector containg the sizes to analyse
 
-sizes <- c(5,50,200,500,1000)
+sizes <- c(5,50,500,1000)
 
 # for spec names first letter upper, the rest lower
 # also use common names except for cow which is Bovine
 
-spec1 <- "Human"
-spec2 <- "Bovine"
-UCSCspec2 <- "bosTau6"
+spec1 <- "Dog"
+spec2 <- "Human"
+UCSCspec2 <- "hg19"
 
 setwd("/scratch/reuben_counting/TE_div/")
 ## write it in R to underastand the problem
@@ -79,17 +65,7 @@ if(any(specfile == "AllBinCounts.txt")){
 		s2name <- paste("/scratch/ForReuben201404/",spec2,"/binData.txt", sep = "")}
 
 s1 <- read.table(s1name, header = TRUE)
-if(rem.un == "yes"){
-	if(length(grep("U", s1$chr)) > 0){s1 <- s1[-(grep( "U", s1$chr)),]}
-	if(length(grep("_", s1$chr)) > 0){s1 <- s1[-(grep("_", s1$chr)),]}
-	if(length(grep("M", s1$chr)) > 0){s1 <- s1[-(grep("M", s1$chr)),]}
-	}
 s2 <- read.table(s2name, header = TRUE)
-if(rem.un == "yes"){
-	if(length(grep("U", s2$chr)) > 0){s2 <- s2[-(grep( "U", s2$chr)),]}
-	if(length(grep("_", s2$chr)) > 0){s2 <- s2[-(grep("_", s2$chr)),]}
-	if(length(grep("M", s2$chr)) > 0){s2 <- s2[-(grep("M", s2$chr)),]}
-	}
 
 # s1 and s2 require editing to remove unnecsary features for our purposes
 slist <- list(s1,s2)
@@ -128,6 +104,18 @@ KnownS2	<- data.frame(slist[[2]]$binID,	slist[[2]]$Known)
 
 s1 <- slist[[1]][,!(colnames(slist[[1]]) == "Known")]
 s2 <- slist[[2]][,!(colnames(slist[[2]]) == "Known")]
+
+if(rem.un == "yes"){
+        if(length(grep("U", s1$chr)) > 0){s1 <- s1[-(grep( "U", s1$chr)),]}
+        if(length(grep("_", s1$chr)) > 0){s1 <- s1[-(grep("_", s1$chr)),]}
+	if(length(grep("M", s1$chr)) > 0){s1 <- s1[-(grep("M", s1$chr)),]}
+        }
+if(rem.un == "yes"){
+        if(length(grep("U", s2$chr)) > 0){s2 <- s2[-(grep( "U", s2$chr)),]}
+        if(length(grep("_", s2$chr)) > 0){s2 <- s2[-(grep("_", s2$chr)),]}
+        if(length(grep("M", s2$chr)) > 0){s2 <- s2[-(grep("M", s2$chr)),]}
+        }
+
 
 
 # handling negative alignments
