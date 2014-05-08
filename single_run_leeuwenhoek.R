@@ -34,12 +34,12 @@
 rm( list = ls())
 
 
-require("doParallel")
+#require("doParallel")
 require(GenomicRanges)
 
 #parallel options
-cl <- makeCluster(6)
-registerDoParallel(cl)
+#cl <- makeCluster(6)
+#registerDoParallel(cl)
 
 
 # option to remove unplaced chromosomes
@@ -48,7 +48,7 @@ rem.un <- "yes"
 # option to decide the various neighborhood sizes to be used 
 # write out a vector containg the sizes to analyse
 
-sizes <- c(5,50,200,500,1000,1500)
+sizes <- c(5,50,200,500,1000)
 
 # for spec names first letter upper, the rest lower
 # also use common names except for cow which is Bovine
@@ -98,9 +98,9 @@ bin.size = 500000
 
 #which columns to keep 
 keep.NGenes = "yes"
-keep.NG4s = "yes"
+keep.NG4s = "no"
 keep.NCpGI = "yes"
-keep.CpGBP = "yes"
+keep.CpGBP = "no"
 keep.GC = "yes"
 SCALE = "yes"
 
@@ -663,7 +663,7 @@ for(i in seq(S1bin)){
 	Dists <- rbind(Dists, row_final)	
 	}
 	
-write.table(Dists, file = paste("Div_score/", spec1, "_to_", spec2, "_Mdim_dist_scaled_N.size_", no, sep = ""), quote = FALSE, sep = "\t", row.names= FALSE )
+write.table(Dists, file = paste("Div_score/", spec1, "_to_", spec2, "_Mdim_dist_scaled_N.size_fix_width_", no, sep = ""), quote = FALSE, sep = "\t", row.names= FALSE )
 	
 	
 }
