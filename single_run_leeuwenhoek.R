@@ -506,28 +506,14 @@ M.g <- Merged.DF
 # not all bins are 1500000
 # probably need to make a vector of bin IDs nad known bases in those bins and then divide by the nuber of known bases
 
+
+
+s1.m.lengths <-	merge(M.g$binS1_bin_ID, KnownS1, by.x=1, by.y=1)
+s2.m.lengths <- merge(M.g$binS2_bin_ID, KnownS2, by.x=1, by.y=1)
+M.g$aS1_width <- M.g$aS1_width/s1.m.lengths[,2]
+M.g$aS2_width <- M.g$aS2_width/s2.m.lengths[,2]
+
 # turn widths into proportions
-KnownS1.high <- KnownS1[KnownS1[,2] == 1500000,]
-KnownS1.low <- KnownS1[KnownS1[,2] < 1500000,]
-M.g.s1.high <- M.g[M.g$binS1_bin_ID %in% KnownS1.high[,1],]
-M.g.s1.low <- M.g[M.g$binS1_bin_ID %in% KnownS1.low[,1],]
-M.g.s1.high$aS1_width <- M.g.s1.high$aS1_width/1500000
-for(i in seq(dim(KnownS1.low)[1])){
-      M.g.s1.low[M.g.s1.low$binS1_bin_ID == KnownS1.low[i,1],'aS1_width'] <- M.g.s1.low[M.g.s1.low$binS1_bin_ID == KnownS1.low[i,1],'aS1_width']/KnownS1.low[i,2]
-}
-M.g <- rbind(M.g.s1.high,M.g.s1.low)
-
-KnownS2.high <- KnownS2[KnownS2[,2] == 1500000,]
-KnownS2.low <- KnownS2[KnownS2[,2] < 1500000,]
-M.g.s2.high <- M.g[M.g$binS2_bin_ID %in% KnownS2.high[,1],]
-M.g.s2.low <- M.g[M.g$binS2_bin_ID %in% KnownS2.low[,1],]
-M.g.s2.high$aS2_width <- M.g.s2.high$aS2_width/1500000
-for(i in seq(dim(KnownS2.low)[1])){
-      M.g.s2.low[M.g.s2.low$binS2_bin_ID == KnownS2.low[i,1],'aS2_width'] <- M.g.s2.low[M.g.s2.low$binS2_bin_ID == KnownS2.low[i,1],'aS2_width']/KnownS2.low[i,2]
-}
-M.g <- rbind(M.g.s2.high,M.g.s2.low)
- 
-
 #M.g[,c(4,9)] <- M.g[,c(4,9)]/1500000
 
 # M.a is supposed to be widths inside each bin
@@ -560,7 +546,7 @@ for (i in seq(along=Hbins)){
 
 colnames(s.bin) <- c("S1.bin", "S1.Proportion", "S2.bin", "S2.Proportion")
 
-write.table(s.bin, file=paste("./S_bins/", spec1, "aligning", spec2,"_single_run_scaled", sep = ""), sep = "\t", quote = FALSE,row.names = FALSE)
+write.table(s.bin, file=paste("./S_bins/", spec1, "aligning", spec2,"_single_run_scaled_newwidth", sep = ""), sep = "\t", quote = FALSE,row.names = FALSE)
 
 
 
