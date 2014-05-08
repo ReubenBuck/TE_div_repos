@@ -123,8 +123,8 @@ for(i in seq(along=slist)){
       slist[[i]] <- count
 }
 
-KnownS1 <- data.frame(slist[[1]]$binID, slist[[1]]$Known
-KnownS2	<- data.frame(slist[[2]]$binID,	slist[[2]]$Known
+KnownS1 <- data.frame(slist[[1]]$binID, slist[[1]]$Known)
+KnownS2	<- data.frame(slist[[2]]$binID,	slist[[2]]$Known)
 
 s1 <- slist[[1]][,!(colnames(slist[[1]]) == "Known")]
 s2 <- slist[[2]][,!(colnames(slist[[2]]) == "Known")]
