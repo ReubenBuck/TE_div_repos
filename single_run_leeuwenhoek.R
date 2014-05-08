@@ -104,6 +104,9 @@ keep.CpGBP = "yes"
 keep.GC = "yes"
 SCALE = "yes"
 
+#create objects into whcih i will store the binsizes
+
+
 for(i in seq(along=slist)){
       count <- slist[[i]]
       count <- count[count$Known >= bin.size,]
@@ -114,14 +117,17 @@ for(i in seq(along=slist)){
       if(keep.NCpGI ==	"no"){count <- count[,!(colnames(count) == "NCpGI")]}
       if(keep.CpGBP  ==	"no"){count <- count[,!(colnames(count) == "CpGBP")]}
       if(keep.GC ==	"no"){count <- count[,!(colnames(count) == "GC")]}
-      count <- count[,!(colnames(count) == "Known")]
+      #count <- count[,!(colnames(count) == "Known")]
       colnames(count)[1:4] <- c("chr", "binID", "start", "end")
       count$binID <- 1:dim(count)[1]
       slist[[i]] <- count
 }
 
-s1 <- slist[[1]]
-s2 <- slist[[2]]
+KnownS1 <- data.frame(slist[[1]]$binID, slist[[1]]$Known
+KnownS2	<- data.frame(slist[[2]]$binID,	slist[[2]]$Known
+
+s1 <- slist[[1]][,!(colnames(slist[[1]]) == "Known")]
+s2 <- slist[[2]][,!(colnames(slist[[2]]) == "Known")]
 
 
 # handling negative alignments
@@ -500,8 +506,29 @@ M.g <- Merged.DF
 # not all bins are 1500000
 # probably need to make a vector of bin IDs nad known bases in those bins and then divide by the nuber of known bases
 
+# turn widths into proportions
+KnownS1.high <- KnownS1[KnownS1[,2] == 1500000,]
+KnownS1.low <- KnownS1[KnownS1[,2] < 1500000,]
+M.g.s1.high <- M.g[M.g$binS1_bin_ID %in% KnownS1.high[,1],]
+M.g.s1.low <- M.g[M.g$binS1_bin_ID %in% KnownS1.low[,1],]
+M.g.s1.high$aS1_width <- M.g.s1.high$aS1_width/1500000
+for(i in seq(dim(KnownS1.low)[1])){
+      M.g.s1.low[M.g.s1.low$binS1_bin_ID == KnownS1.low[i,1],'aS1_width'] <- M.g.s1.low[M.g.s1.low$binS1_bin_ID == KnownS1.low[i,1],'aS1_width']/KnownS1.low[i,2]
+}
+M.g <- rbind(M.g.s1.high,M.g.s1.low)
+
+KnownS2.high <- KnownS2[KnownS2[,2] == 1500000,]
+KnownS2.low <- KnownS2[KnownS2[,2] < 1500000,]
+M.g.s2.high <- M.g[M.g$binS2_bin_ID %in% KnownS2.high[,1],]
+M.g.s2.low <- M.g[M.g$binS2_bin_ID %in% KnownS2.low[,1],]
+M.g.s2.high$aS2_width <- M.g.s2.high$aS2_width/1500000
+for(i in seq(dim(KnownS2.low)[1])){
+      M.g.s2.low[M.g.s2.low$binS2_bin_ID == KnownS2.low[i,1],'aS2_width'] <- M.g.s2.low[M.g.s2.low$binS2_bin_ID == KnownS2.low[i,1],'aS2_width']/KnownS2.low[i,2]
+}
+M.g <- rbind(M.g.s2.high,M.g.s2.low)
  
-M.g[,c(4,9)] <- M.g[,c(4,9)]/1500000
+
+#M.g[,c(4,9)] <- M.g[,c(4,9)]/1500000
 
 # M.a is supposed to be widths inside each bin
 
