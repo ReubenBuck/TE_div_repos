@@ -86,7 +86,7 @@ SCALE = "yes"
 for(i in seq(along=slist)){
       count <- slist[[i]]
       count <- count[count$Known >= bin.size,]
-      count[,5:(length(count)-1)] <- count[,5:(length(count)-1)]/mb   
+      count[,5:(length(count)-1)] <- (count[,5:(length(count)-1)] / count$Known) *mb   
       if(SCALE == "yes"){count[,5:(length(count)-1)] <- scale(count[,5:(length(count)-1)])}
       if(keep.NGenes == "no"){count <- count[,!(colnames(count) == "NGenes")]}
       if(keep.NG4s ==	"no"){count <- count[,!(colnames(count) == "NG4s")]}
@@ -534,7 +534,7 @@ for (i in seq(along=Hbins)){
 
 colnames(s.bin) <- c("S1.bin", "S1.Proportion", "S2.bin", "S2.Proportion")
 
-write.table(s.bin, file=paste("./S_bins/", spec1, "aligning", spec2,"_single_run_scaled_newwidth", sep = ""), sep = "\t", quote = FALSE,row.names = FALSE)
+write.table(s.bin, file=paste("./S_bins/", spec1, "_aligning_", spec2,"_scaled_fix_rate", sep = ""), sep = "\t", quote = FALSE,row.names = FALSE)
 
 
 
