@@ -34,14 +34,13 @@ rem.un <- "yes"
 # option to decide the various neighborhood sizes to be used 
 # write out a vector containg the sizes to analyse
 
-sizes <- 1
 
 # for spec names first letter upper, the rest lower
 # also use common names except for cow which is Bovine
 
-spec1 <- "Mouse"
-spec2 <- "Platypus"
-UCSCspec2 <- "ornAna1"
+spec1 <- "Human"
+spec2 <- "Elephant"
+UCSCspec2 <- "loxAfr3"
 
 setwd("/scratch/reuben_counting/TE_div/")
 ## write it in R to underastand the problem
@@ -110,11 +109,17 @@ if(rem.un == "yes"){
         if(length(grep("_", s1$chr)) > 0){s1 <- s1[-(grep("_", s1$chr)),]}
 	if(length(grep("M", s1$chr)) > 0){s1 <- s1[-(grep("M", s1$chr)),]}
         }
-if(rem.un == "yes"){
-        if(length(grep("U", s2$chr)) > 0){s2 <- s2[-(grep( "U", s2$chr)),]}
-        if(length(grep("_", s2$chr)) > 0){s2 <- s2[-(grep("_", s2$chr)),]}
-        if(length(grep("M", s2$chr)) > 0){s2 <- s2[-(grep("M", s2$chr)),]}
-        }
+
+# comented out because all elephant information is on scaffolds 
+
+#if(rem.un == "yes"){
+#        if(length(grep("U", s2$chr)) > 0){s2 <- s2[-(grep( "U", s2$chr)),]}
+#        if(length(grep("_", s2$chr)) > 0){s2 <- s2[-(grep("_", s2$chr)),]}
+#        if(length(grep("M", s2$chr)) > 0){s2 <- s2[-(grep("M", s2$chr)),]}
+#        }
+
+# fix s2 chromosome to refelect scaffolding
+s2$chr <- paste("scaffold_",s2$chr,sep ="")
 
 
 
@@ -167,6 +172,8 @@ A <- a
 
 S1rep <- read.table(paste("Rep_files/all_chr_rep_", spec1, sep=""))
 S2rep <- read.table(paste("Rep_files/all_chr_rep_", spec2, sep=""))
+S2rep[,1] <- sub("lcl.", "", S2rep[,1])
+
 
 S1rep.gr <- reduce(GRanges(seqnames = Rle(S1rep[,1]), ranges = IRanges(start = S1rep[,2], end = S1rep[,3])))
 S2rep.gr <- reduce(GRanges(seqnames = Rle(S2rep[,1]), ranges = IRanges(start = S2rep[,2], end = S2rep[,3])))
@@ -385,7 +392,10 @@ if(length(XS1)>0){print("repeats and alignments are overlapping")
 XS2 <- as.matrix(findOverlaps(a.S1.gr, S1rep.gr))
 if(length(XS2)>0){print("repeats and alignments	are overlapping")
                 quit(save = "no")}
-
+######
+##      Potential error here that has been caried through to all S.bin analyses
+######   the chr is not present and start stop coordinates aren't there and bin ID too 
+# 
 
 s1.gr <- GRanges( seqnames = Rle(s1$chr), 
 					ranges = IRanges(start = s1$start, end = s1$end),
